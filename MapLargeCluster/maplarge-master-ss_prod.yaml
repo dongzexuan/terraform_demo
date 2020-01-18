@@ -1,0 +1,144 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"StatefulSet","metadata":{"annotations":{},"labels":{"app":"maplarge_application","role":"master"},"name":"maplarge-master-ss","namespace":"default"},"spec":{"podManagementPolicy":"OrderedReady","replicas":1,"selector":{"matchLabels":{"app":"maplarge_application","role":"master"}},"serviceName":"maplarge","template":{"metadata":{"labels":{"app":"maplarge_application","role":"master"}},"spec":{"containers":[{"env":[{"name":"ML_ROOT_PASS","valueFrom":{"secretKeyRef":{"key":"password","name":"maplarge-root-password-secret"}}},{"name":"ML_REPL_ENABLED","value":"false"},{"name":"ML_REPL_SELF_URL","value":"http://maplarge-master-ss-0.maplarge.default.svc.cluster.local"},{"name":"ML_REPL_FAILOVER_URL","value":"http://maplarge-fomaster-ss-0.maplarge.default.svc.cluster.local"},{"name":"ML_REPL_MODE","value":"master"},{"name":"ML_REPL_USER","value":"clone@ml.com"},{"name":"ML_REPL_PASS","valueFrom":{"secretKeyRef":{"key":"password","name":"maplarge-root-password-secret"}}},{"name":"ML_REPL_NICE_NAME","valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}},{"name":"ML_CLIENT_CONFIG_SSL_MODE","value":"NoSsl"},{"name":"ML_CLIENT_CONFIG_ENABLE_CORS","value":"true"},{"name":"ML_CORS_ALLOWED_ORIGINS","value":"%"}],"image":"docker.io/maplarge/server-netcore:ubuntu-xenial","imagePullPolicy":"Always","livenessProbe":{"failureThreshold":12,"httpGet":{"path":"/version.txt","port":80},"initialDelaySeconds":120,"periodSeconds":5,"timeoutSeconds":5},"name":"maplarge-master-container","ports":[{"containerPort":80}],"readinessProbe":{"failureThreshold":60,"httpGet":{"path":"/ServerSync/CheckPlayback","port":80},"initialDelaySeconds":30,"periodSeconds":5,"timeoutSeconds":2},"resources":{"limits":{"cpu":"60","memory":"200Gi"},"requests":{"cpu":"60","memory":"200Gi"}},"volumeMounts":[{"mountPath":"/opt/maplarge/App_Data","name":"maplarge-master-storage"}]}],"dnsPolicy":"ClusterFirst","imagePullSecrets":[{"name":"ml-docker-secret"}],"restartPolicy":"Always","securityContext":{"fsGroup":1000},"terminationGracePeriodSeconds":120,"volumes":[{"name":"maplarge-master-storage","persistentVolumeClaim":{"claimName":"maplarge-master-claim"}}]}},"volumeClaimTemplates":[{"metadata":{"name":"maplarge-master-storage"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"100Gi"}},"storageClassName":"maplarge-ssd-storage"}}]}}
+  creationTimestamp: "2019-06-19T15:47:05Z"
+  generation: 1
+  labels:
+    app: maplarge_application
+    role: master
+  name: maplarge-master-ss
+  namespace: default
+  resourceVersion: "18373"
+  selfLink: /apis/apps/v1beta1/namespaces/default/statefulsets/maplarge-master-ss
+  uid: 7cd251ea-92a9-11e9-85bc-42010a800137
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: maplarge_application
+      role: master
+  serviceName: maplarge
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: maplarge_application
+        role: master
+    spec:
+      containers:
+      - env:
+        - name: ML_ROOT_PASS
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: maplarge-root-password-secret
+        - name: ML_REPL_ENABLED
+          value: "false"
+        - name: ML_REPL_SELF_URL
+          value: http://maplarge-master-ss-0.maplarge.default.svc.cluster.local
+        - name: ML_REPL_FAILOVER_URL
+          value: http://maplarge-fomaster-ss-0.maplarge.default.svc.cluster.local
+        - name: ML_REPL_MODE
+          value: master
+        - name: ML_REPL_USER
+          value: clone@ml.com
+        - name: ML_REPL_PASS
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: maplarge-root-password-secret
+        - name: ML_REPL_NICE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: ML_CLIENT_CONFIG_SSL_MODE
+          value: NoSsl
+        - name: ML_CLIENT_CONFIG_ENABLE_CORS
+          value: "true"
+        - name: ML_CORS_ALLOWED_ORIGINS
+          value: '%'
+        # image: docker.io/maplarge/apc:ubuntu-xenial
+        image: gcr.io/aaet-geoscience-prod/maplarge/apc:ubuntu-xenial-4.5.0-3.2.0.20190906222515-dev-MapLarge
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 12
+          httpGet:
+            path: /version.txt
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: maplarge-master-container
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 60
+          httpGet:
+            path: /ServerSync/CheckPlayback
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: "60"
+            memory: 200Gi
+          requests:
+            cpu: "60"
+            memory: 200Gi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/maplarge/App_Data
+          name: maplarge-master-storage
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: ml-docker-secret
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 120
+      volumes:
+      - name: maplarge-master-storage
+        persistentVolumeClaim:
+          claimName: maplarge-master-claim
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      creationTimestamp: null
+      name: maplarge-master-storage
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      dataSource: null
+      resources:
+        requests:
+          storage: 100Gi
+      storageClassName: maplarge-ssd-storage
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+status:
+  collisionCount: 0
+  currentReplicas: 1
+  currentRevision: maplarge-master-ss-569c8dbd4c
+  observedGeneration: 1
+  readyReplicas: 1
+  replicas: 1
+  updateRevision: maplarge-master-ss-569c8dbd4c
+  updatedReplicas: 1

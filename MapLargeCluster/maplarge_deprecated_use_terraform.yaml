@@ -1,0 +1,157 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: maplarge-ssd-storage
+  labels:
+    app: maplarge_application
+parameters:
+  type: pd-ssd
+provisioner: kubernetes.io/gce-pd
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: maplarge-root-password-secret
+type: Opaque
+data:
+  password: bWFwbGFyZ2U=
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: maplarge_application
+    role: balancer
+  name: maplarge-service
+  namespace: default
+spec:
+  externalTrafficPolicy: Cluster
+  type: NodePort
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: maplarge_application
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maplarge
+spec:
+  selector:
+    app: maplarge_application
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: maplarge-master-ss
+  labels:
+    app: maplarge_application
+    role: master
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maplarge_application
+      role: master
+  serviceName: maplarge
+  template:
+    metadata:
+      labels:
+        app: maplarge_application
+        role: master
+    spec:
+      imagePullSecrets:
+        - name: ml-docker-secret
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 1000
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      volumes:
+        - name: maplarge-master-storage
+          persistentVolumeClaim:
+            claimName: maplarge-master-claim
+      containers:
+        - name: maplarge-master-container
+          image: docker.io/maplarge/server-netcore:ubuntu-xenial
+          resources:
+            requests:
+              memory: "50Gi"
+              cpu: "15"
+            limits:
+              memory: "55Gi"
+              cpu: "15"
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /version.txt
+              port: 80
+            initialDelaySeconds: 120
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 12 #after 1 minutes, we mark pod unready
+          readinessProbe:
+            httpGet:
+              path: /ServerSync/CheckPlayback
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 60 #after 5 minutes, we mark pod unready
+          env:
+            - name: ML_ROOT_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: maplarge-root-password-secret
+            - name: ML_REPL_ENABLED
+              value: "false"
+            - name: ML_REPL_SELF_URL
+              value: "https://urldefense.proofpoint.com/v2/url?u=http-3A__maplarge-2Dmaster-2Dss-2D0.maplarge.default.svc.cluster.local&d=DwIGAg&c=DuYp0t-nyYfNYRZCC5C5Ow&r=N6jkKe_QN3FTAU1CYmD5wTpzyJaii_237yh_hw7RpS4&m=pcySk-lvry_VcNeBVVOdlqLlxnnbggew_pWyY1KJ0LI&s=_3s3m-JzAJx8fkteUCeIFJyYG9sBXb2NFXIt9Xb82-Q&e= "
+            - name: ML_REPL_FAILOVER_URL
+              value: "https://urldefense.proofpoint.com/v2/url?u=http-3A__maplarge-2Dfomaster-2Dss-2D0.maplarge.default.svc.cluster.local&d=DwIGAg&c=DuYp0t-nyYfNYRZCC5C5Ow&r=N6jkKe_QN3FTAU1CYmD5wTpzyJaii_237yh_hw7RpS4&m=pcySk-lvry_VcNeBVVOdlqLlxnnbggew_pWyY1KJ0LI&s=No-QKAJ1fjh-3amxb8IPvTSFiL2xKY4F8fkWO9hoWVg&e= "
+            - name: ML_REPL_MODE
+              value: "master"
+            - name: ML_REPL_USER
+              value: "clone@ml.com"
+            - name: ML_REPL_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: maplarge-root-password-secret
+            - name: ML_REPL_NICE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ML_CLIENT_CONFIG_SSL_MODE
+              value: "NoSsl"
+            - name: ML_CLIENT_CONFIG_ENABLE_CORS
+              value: "true"
+            - name: ML_CORS_ALLOWED_ORIGINS
+              value: "%"
+            - name: ML_CLIENT_CONFIG_SERVER_HOSTNAME
+              value: "og-dryrun.maplarge.net"
+            - name: ML_CLIENT_CONFIG_PREFIX_COUNT
+              value: "8"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: /opt/maplarge/App_Data
+              name: maplarge-master-storage
+  volumeClaimTemplates:
+    - metadata:
+        name: maplarge-master-storage
+      spec:
+        storageClassName: maplarge-ssd-storage
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50Gi

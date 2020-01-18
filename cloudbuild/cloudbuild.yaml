@@ -1,0 +1,22 @@
+steps:
+
+      - name: gcr.io/cloud-builders/gcloud
+        args: ["info"]
+      # Init Terraform
+      - name: hashicorp/terraform
+        args: ['init']
+        dir: 'MapLargeCluster'
+      # Select the workspace (manually must have been created (production/development))
+      - name: hashicorp/terraform
+        args: ['workspace', 'select', '${_ENVIRONMENT}']
+        dir: 'MapLargeCluster'
+      # Create the GCP cluster using Terraform
+      - name: hashicorp/terraform
+        args: ['apply', 
+        '-auto-approve',
+        '-var', 'GCP_PROJECT=${_GCP_PROJECT}',
+        '-var', 'GCP_REGION=${_GCP_REGION}'
+        ]
+        dir: 'MapLargeCluster'
+
+timeout: "1600s"

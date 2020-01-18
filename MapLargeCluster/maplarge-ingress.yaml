@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  labels:
+    app: maplarge_application
+  name: maplarge-ingress
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: ml-static-ip
+    #kubernetes.io/ingress.class: "nginx"
+    #nginx.ingress.kubernetes.io/proxy-body-size: 2500m
+spec:
+  tls:
+  - secretName: ml-tls-secret
+  backend:
+    serviceName: maplarge-service
+    servicePort: 80
