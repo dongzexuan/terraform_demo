@@ -1,6 +1,8 @@
 # Lithos Infrastructure Environment
 Tools and documentation for managing Lithos Infrastructure
 
+![Illustration of architecture diagram for Lithos](https://github.com/dongzexuan/terraform_demo/blob/master/illustration.png)
+
 ## Development Environment
 ### Overview
 This environment provides the everything necessary to code/test/debug and prepare for release the Lithos Environment.
